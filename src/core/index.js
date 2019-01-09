@@ -39,7 +39,7 @@ const createComponent = ({ render, components, mixins }) => ({
     const ops = mergeObject(GCF, _gfc);
 
     this.$options.propsData.ops = this.$options.propsData.ops || {};
-    Object.keys(this.$options.propsData.ops).forEach(key => {
+    Object.keys(this.$options.propsData.ops).forEach((key) => {
       {
         defineReactive(this.mergedOptions, key, this.$options.propsData.ops);
       }
@@ -124,7 +124,7 @@ const createComponent = ({ render, components, mixins }) => ({
     }
   },
   updated() {
-    this.updatedCbs.forEach(cb => {
+    this.updatedCbs.forEach((cb) => {
       cb.call(this);
     });
     // Clear
@@ -314,7 +314,7 @@ const createComponent = ({ render, components, mixins }) => ({
        * 1. we don't need to registry resize
        * 2. we don't need to registry scroller.
        */
-      smallChangeArray.forEach(opts => {
+      smallChangeArray.forEach((opts) => {
         this.$watch(
           opts,
           () => {
@@ -361,18 +361,28 @@ const createComponent = ({ render, components, mixins }) => ({
     },
 
     setDomInfo() {
-      if (this.destroySectionManager) {
-        this.destroySectionManager();
-        this.currentViewDom = this.lastViewDom = [];
-        this.sectionManager = null;
-      }
-
       if (!this.mergedOptions.vuescroll.hideItemWhenInvisiable) {
+        this.groupManager = null;
         return;
       }
 
-      const children = this.getChildren();
-      GroupManager;
+      if (!this.groupManager) {
+        const children = this.getChildren();
+        const { left: l, top: t } = this.$el.getBoundingClientRect();
+        const group = [];
+        children.forEach((child, index) => {
+          const { left, top, width, height } = child.getBoundingClientRect();
+          group.push({
+            x: left - l,
+            y: top - y,
+            height,
+            width,
+            index
+          });
+        });
+
+        this.groupManager = new GroupManager(group, 100 /* section size */);
+      }
     },
     getChildren() {
       const parent = this.contentElm;
