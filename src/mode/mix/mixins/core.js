@@ -15,6 +15,13 @@ export default {
   computed: {
     mode() {
       return this.mergedOptions.vuescroll.mode;
+    },
+    contentElm() {
+      return this.mode == 'slide'
+        ? this.scrollPanelElm
+        : this.mode == 'native'
+        ? this.scrollContentElm
+        : [];
     }
   },
   methods: {

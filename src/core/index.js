@@ -117,6 +117,7 @@ const createComponent = ({ render, components, mixins }) => ({
         // need to reflow to deal with the
         // latest thing.
         this.updateBarStateAndEmitEvent();
+        this.setDomInfo();
       });
     }
   },
@@ -159,7 +160,10 @@ const createComponent = ({ render, components, mixins }) => ({
           /** How many times you have scrolled */
           scrollingTimes: 0,
           // current size strategy
-          currentSizeStrategy: 'percent'
+          currentSizeStrategy: 'percent',
+
+          currentViewDom: [],
+          lastViewDom: []
         }
       },
       bar: {
@@ -352,6 +356,30 @@ const createComponent = ({ render, components, mixins }) => ({
       this.destroyParentDomResize = resizeEnable
         ? installResizeDetection(this.$el.parentNode, this.useNumbericSize)
         : () => {};
+    },
+
+    setDomInfo() {
+      if (this.destroySectionManager) {
+        this.destroySectionManager();
+        this.currentViewDom = this.lastViewDom = [];
+        this.sectionManager = null;
+      }
+
+      if (!this.mergedOptions.vuescroll.hideItemWhenInvisiable) {
+        return;
+      }
+
+      const children = this.getChildren();
+    },
+    getChildren() {
+      const parent = this.contentElm;
+      const deepLevel = this.mergedOptions.vuescroll.hideItemDeep;
+      const children = parent.children;
+      while (deepLevel--) {
+        children = children[0].children;
+      }
+
+      return Array.from(children);
     }
   }
 });
