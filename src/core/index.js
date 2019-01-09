@@ -12,6 +12,8 @@ import { smallChangeArray } from 'shared/constants';
 import { installResizeDetection } from 'core/third-party/resize-detector/index';
 import { createBar } from 'mode/shared/bar';
 
+import GroupManager from './third-party/SectionManager/GroupManager';
+
 /**
  * This is like a HOC, It extracts the common parts of the
  * native-mode, slide-mode and mix-mode.
@@ -370,6 +372,7 @@ const createComponent = ({ render, components, mixins }) => ({
       }
 
       const children = this.getChildren();
+      GroupManager;
     },
     getChildren() {
       const parent = this.contentElm;

@@ -1,11 +1,14 @@
+/**
+ * React-Virtualized
+ *
+ */
+
 import SectionManager from './SectionManager';
 
 /** Represents a group of logically-related items */
 export default class GroupManager {
-  constructor(group, groupId, sectionSize, cellSizeAndPositionGetter, unwatch) {
-    this._groupId = groupId;
+  constructor(group, sectionSize) {
     this._sectionSize = sectionSize;
-    this._cellSizeAndPositionGetter = cellSizeAndPositionGetter;
     this.totalHeight = 0;
     this.totalWidth = 0;
     this.updateGroup(group);
@@ -17,11 +20,7 @@ export default class GroupManager {
     let totalWidth = 0;
 
     group.forEach((item, index) => {
-      const cellMetadatum = this._cellSizeAndPositionGetter(
-        item,
-        index,
-        this._groupId
-      );
+      const { index, ...cellMetadatum } = item;
       sectionManager.registerCell({
         index,
         cellMetadatum
