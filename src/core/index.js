@@ -164,8 +164,8 @@ const createComponent = ({ render, components, mixins }) => ({
           // current size strategy
           currentSizeStrategy: 'percent',
 
-          currentViewDom: [],
-          lastViewDom: []
+          currentChildren: [],
+          lastChildren: []
         }
       },
       bar: {
@@ -371,28 +371,23 @@ const createComponent = ({ render, components, mixins }) => ({
         const { left: l, top: t } = this.$el.getBoundingClientRect();
         const group = [];
         children.forEach((child, index) => {
-          const { left, top, width, height } = child.getBoundingClientRect();
-          group.push({
-            x: left - l,
-            y: top - y,
-            height,
-            width,
-            index
-          });
+          if (!child.isResizeElm) {
+            const { left, top } = child.getBoundingClientRect();
+            group.push({
+              x: left - l,
+              y: top - t,
+              height: child.offsetHeight,
+              width: child.offsetWidth,
+              index
+            });
+          }
         });
 
         this.groupManager = new GroupManager(group, 100 /* section size */);
       }
     },
     getChildren() {
-      const parent = this.contentElm;
-      const deepLevel = this.mergedOptions.vuescroll.hideItemDeep;
-      const children = parent.children;
-      while (deepLevel--) {
-        children = children[0].children;
-      }
-
-      return Array.from(children);
+      return Array.from(this.contentElm.children);
     }
   }
 });

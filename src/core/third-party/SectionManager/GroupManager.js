@@ -14,7 +14,7 @@ export default class GroupManager {
   updateGroup(group) {
     const sectionManager = new SectionManager(this._sectionSize);
 
-    group.forEach((item, index) => {
+    group.forEach((item) => {
       const { index, ...cellMetadatum } = item;
       sectionManager.registerCell({
         index,
