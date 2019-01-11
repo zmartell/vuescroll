@@ -2037,6 +2037,8 @@ var createComponent = function createComponent(_ref) {
           width: clientWidth,
           height: clientHeight
         });
+
+        console.log(this.vuescroll.state.currentViewDom);
       },
       getChildren: function getChildren() {
         return Array.from(this.contentElm.children);

@@ -408,6 +408,8 @@ const createComponent = ({ render, components, mixins }) => ({
         width: clientWidth,
         height: clientHeight
       });
+
+      console.log(this.vuescroll.state.currentViewDom);
     },
     getChildren() {
       return Array.from(this.contentElm.children);

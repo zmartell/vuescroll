@@ -2061,6 +2061,8 @@ var createComponent = function createComponent(_ref) {
           width: clientWidth,
           height: clientHeight
         });
+
+        console.log(this.vuescroll.state.currentViewDom);
       },
       getChildren: function getChildren() {
         return Array.from(this.contentElm.children);
@@ -2358,14 +2360,6 @@ function getPanelData(context) {
     }
   }
 
-  if (context.mergedOptions.vuescroll.enableVirtual) {
-    if (!context.hasCalculatedVirtualDomSizeAndPos) {
-      data.class.push('__calculating-size');
-    } else {
-      data.class.push('__virtual');
-    }
-  }
-
   // clear legency styles of slide mode...
   data.style.transformOrigin = '';
   data.style.transform = '';
@@ -2397,9 +2391,17 @@ function getPanelChildren(h, context) {
   var data = {
     style: viewStyle,
     ref: 'scrollContent',
-    class: '__view'
+    class: ['__view']
   };
   var _customContent = context.$slots['scroll-content'];
+
+  if (context.mergedOptions.vuescroll.enableVirtual) {
+    if (!context.hasCalculatedVirtualDomSizeAndPos) {
+      data.class.push('__calculating-size');
+    } else {
+      data.class.push('__virtual');
+    }
+  }
 
   if (context.mergedOptions.scrollPanel.scrollingX) {
     viewStyle.width = getComplitableStyle('width', 'fit-content');
@@ -2442,9 +2444,8 @@ function virtualDomFilter(slots) {
     var slot = slots[index];
     var metaDatum = _this.groupManager.getCellMetadata(index);
     var style = slot.data.style = slot.data.style || {};
-    style.left = metaDatum.x;
-    style.top = metaDatum.y;
-
+    style.left = metaDatum.x + 'px';
+    style.top = metaDatum.y + 'px';
     return slot;
   });
 

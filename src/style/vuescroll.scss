@@ -5,10 +5,10 @@
   .__panel {
     box-sizing: border-box;
     position: relative;
-    &.__calculating-size {
+    .__calculating-size {
       visibility: hidden;
     }
-    &.__virtual > * {
+    .__virtual > * {
       position: absolute;
     }
     &.__ios {
