@@ -63,6 +63,14 @@ export function getPanelData(context) {
     }
   }
 
+  if (context.mergedOptions.vuescroll.enableVirtual) {
+    if (!context.hasCalculatedVirtualDomSizeAndPos) {
+      data.class.push('__calculating-size');
+    } else {
+      data.class.push('__virtual');
+    }
+  }
+
   // clear legency styles of slide mode...
   data.style.transformOrigin = '';
   data.style.transform = '';
@@ -104,14 +112,43 @@ export function getPanelChildren(h, context) {
     data.style.paddingRight = context.mergedOptions.rail.size;
   }
 
-  if (_customContent) {
-    return insertChildrenIntoSlot(
-      h,
-      _customContent,
-      context.$slots.default,
-      data
-    );
+  if (
+    context.mergedOptions.vuescroll.enableVirtual &&
+    context.hasCalculatedVirtualDomSizeAndPos
+  ) {
+    viewStyle.height = context.vuescroll.state.virtualHeight + 'px';
+    viewStyle.width = context.vuescroll.state.virtualWidth + 'px';
   }
 
-  return <div {...data}>{context.$slots.default}</div>;
+  const children = virtualDomFilter.call(context, context.$slots.default);
+
+  if (_customContent) {
+    return insertChildrenIntoSlot(h, _customContent, children, data);
+  }
+
+  return <div {...data}>{children}</div>;
+}
+
+function virtualDomFilter(slots) {
+  const currentDom = this.vuescroll.state.currentViewDom;
+  if (
+    !this.mergedOptions.vuescroll.enableVirtual ||
+    !currentDom.length ||
+    !this.hasCalculatedVirtualDomSizeAndPos
+  ) {
+    return slots;
+  }
+
+  // filtered dom which we will whow currently
+  const filterdDom = currentDom.map(index => {
+    const slot = slots[index];
+    const metaDatum = this.groupManager.getCellMetadata(index);
+    const style = (slot.data.style = slot.data.style || {});
+    style.left = metaDatum.x;
+    style.top = metaDatum.y;
+
+    return slot;
+  });
+
+  return filterdDom;
 }

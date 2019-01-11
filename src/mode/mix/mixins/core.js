@@ -38,6 +38,9 @@ export default {
       }
     },
     handleScroll(nativeEvent) {
+      if (this.mergedOptions.vuescroll.enableVirtual) {
+        this.setCurrentViewDom();
+      }
       this.updateBarStateAndEmitEvent('handle-scroll', nativeEvent);
     },
     updateBarStateAndEmitEvent(eventType, nativeEvent = null) {

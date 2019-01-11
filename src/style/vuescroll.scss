@@ -5,6 +5,12 @@
   .__panel {
     box-sizing: border-box;
     position: relative;
+    &.__calculating-size {
+      visibility: hidden;
+    }
+    &.__virtual > * {
+      position: absolute;
+    }
     &.__ios {
       -webkit-overflow-scrolling: touch;
     }

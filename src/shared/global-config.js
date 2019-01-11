@@ -10,7 +10,8 @@ const baseConfig = {
     /** Whether to detect dom resize or not */
     detectResize: true,
     hideItemWhenInvisiable: false,
-    hideItemDeep: 0
+    hideItemDeep: 0,
+    enableVirtual: false
   },
   scrollPanel: {
     // when component mounted.. it will automatically scrolls.

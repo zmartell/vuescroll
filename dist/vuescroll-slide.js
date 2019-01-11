@@ -57,9 +57,29 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 
 
+var classCallCheck = function (instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+};
 
+var createClass = function () {
+  function defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
 
-
+  return function (Constructor, protoProps, staticProps) {
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) defineProperties(Constructor, staticProps);
+    return Constructor;
+  };
+}();
 
 
 
@@ -106,7 +126,17 @@ var _extends = Object.assign || function (target) {
 
 
 
+var objectWithoutProperties = function (obj, keys) {
+  var target = {};
 
+  for (var i in obj) {
+    if (keys.indexOf(i) >= 0) continue;
+    if (!Object.prototype.hasOwnProperty.call(obj, i)) continue;
+    target[i] = obj[i];
+  }
+
+  return target;
+};
 
 
 
@@ -764,7 +794,10 @@ var baseConfig = {
     // height ?
     sizeStrategy: 'percent',
     /** Whether to detect dom resize or not */
-    detectResize: true
+    detectResize: true,
+    hideItemWhenInvisiable: false,
+    hideItemDeep: 0,
+    enableVirtual: false
   },
   scrollPanel: {
     // when component mounted.. it will automatically scrolls.
@@ -1377,6 +1410,222 @@ function createBar(h, vm) {
 }
 
 /**
+ * A section of the Window.
+ * Window Sections are used to group nearby cells.
+ * This enables us to more quickly determine which cells to display in a given region of the Window.
+ * Sections have a fixed size and contain 0 to many cells (tracked by their indices).
+ */
+var Section = function () {
+    function Section(_ref) {
+        var height = _ref.height,
+            width = _ref.width,
+            x = _ref.x,
+            y = _ref.y;
+        classCallCheck(this, Section);
+
+        this.height = height;
+        this.width = width;
+        this.x = x;
+        this.y = y;
+
+        this._indexMap = {};
+        this._indices = [];
+    }
+
+    /** Add a cell to this section. */
+
+
+    createClass(Section, [{
+        key: "addCellIndex",
+        value: function addCellIndex(_ref2) {
+            var index = _ref2.index;
+
+            if (!this._indexMap[index]) {
+                this._indexMap[index] = true;
+                this._indices.push(index);
+            }
+        }
+
+        /** Get all cell indices that have been added to this section. */
+
+    }, {
+        key: "getCellIndices",
+        value: function getCellIndices() {
+            return this._indices;
+        }
+
+        /** Intended for debugger/test purposes only */
+
+    }, {
+        key: "toString",
+        value: function toString() {
+            return this.x + "," + this.y + " " + this.width + "x" + this.height;
+        }
+    }]);
+    return Section;
+}();
+
+var SECTION_SIZE = 600;
+
+var SectionManager = function () {
+    function SectionManager() {
+        var sectionSize = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : SECTION_SIZE;
+        classCallCheck(this, SectionManager);
+
+        this._sectionSize = sectionSize;
+
+        this._cellMetadata = [];
+        this._sections = {};
+    }
+
+    createClass(SectionManager, [{
+        key: "registerCell",
+        value: function registerCell(_ref) {
+            var cellMetadatum = _ref.cellMetadatum,
+                index = _ref.index;
+
+            var frozenCellMetadatum = Object.freeze(cellMetadatum);
+            this._cellMetadata[index] = frozenCellMetadatum;
+
+            this.getSections(frozenCellMetadatum).forEach(function (section) {
+                return section.addCellIndex({ index: index });
+            });
+        }
+    }, {
+        key: "freezeCells",
+        value: function freezeCells() {
+            Object.freeze(this._cellMetadata);
+        }
+
+        /** Get all Sections overlapping the specified region. */
+
+    }, {
+        key: "getSections",
+        value: function getSections(_ref2) {
+            var height = _ref2.height,
+                width = _ref2.width,
+                x = _ref2.x,
+                y = _ref2.y;
+
+            var sectionXStart = Math.floor(x / this._sectionSize);
+            var sectionXStop = Math.floor((x + width - 1) / this._sectionSize);
+            var sectionYStart = Math.floor(y / this._sectionSize);
+            var sectionYStop = Math.floor((y + height - 1) / this._sectionSize);
+
+            var sections = [];
+
+            for (var sectionX = sectionXStart; sectionX <= sectionXStop; sectionX++) {
+                for (var sectionY = sectionYStart; sectionY <= sectionYStop; sectionY++) {
+                    var key = sectionX + "." + sectionY;
+
+                    if (!this._sections[key]) {
+                        this._sections[key] = new Section({
+                            height: this._sectionSize,
+                            width: this._sectionSize,
+                            x: sectionX * this._sectionSize,
+                            y: sectionY * this._sectionSize
+                        });
+                    }
+
+                    sections.push(this._sections[key]);
+                }
+            }
+
+            return sections;
+        }
+
+        /** Total number of Sections based on the currently registered cells. */
+
+    }, {
+        key: "getTotalSectionCount",
+        value: function getTotalSectionCount() {
+            return Object.keys(this._sections).length;
+        }
+
+        /**
+         * Gets all cell indices contained in the specified region.
+         * A region may encompass 1 or more Sections.
+         */
+
+    }, {
+        key: "getCellIndices",
+        value: function getCellIndices(_ref3) {
+            var height = _ref3.height,
+                width = _ref3.width,
+                x = _ref3.x,
+                y = _ref3.y;
+
+            var indices = {};
+
+            this.getSections({ height: height, width: width, x: x, y: y }).forEach(function (section) {
+                return section.getCellIndices().forEach(function (index) {
+                    indices[index] = index;
+                });
+            });
+
+            // Object keys are strings; this function returns numbers
+            return Object.keys(indices).map(function (index) {
+                return indices[index];
+            });
+        }
+    }, {
+        key: "getCellMetadata",
+        value: function getCellMetadata(index) {
+            return this._cellMetadata[index];
+        }
+    }]);
+    return SectionManager;
+}();
+
+/**
+ * copy from https://github.com/starkwang/vue-virtual-collection
+ */
+
+/** Represents a group of logically-related items */
+
+var GroupManager = function () {
+  function GroupManager(group, sectionSize) {
+    classCallCheck(this, GroupManager);
+
+    this._sectionSize = sectionSize;
+    this.updateGroup(group);
+  }
+
+  createClass(GroupManager, [{
+    key: 'updateGroup',
+    value: function updateGroup(group) {
+      var sectionManager = new SectionManager(this._sectionSize);
+
+      group.forEach(function (item) {
+        var index = item.index,
+            cellMetadatum = objectWithoutProperties(item, ['index']);
+
+        sectionManager.registerCell({
+          index: index,
+          cellMetadatum: cellMetadatum
+        });
+      });
+
+      sectionManager.freezeCells();
+
+      this._group = group;
+      this._sectionManager = sectionManager;
+    }
+  }, {
+    key: 'getCellIndices',
+    value: function getCellIndices(region) {
+      return this._sectionManager.getCellIndices(region);
+    }
+  }, {
+    key: 'getCellMetadata',
+    value: function getCellMetadata(index) {
+      return this._sectionManager.getCellMetadata(index);
+    }
+  }]);
+  return GroupManager;
+}();
+
+/**
  * This is like a HOC, It extracts the common parts of the
  * native-mode, slide-mode and mix-mode.
  * Each mode must implement the following methods:
@@ -1493,6 +1742,7 @@ var createComponent = function createComponent(_ref) {
           // need to reflow to deal with the
           // latest thing.
           _this2.updateBarStateAndEmitEvent();
+          _this2.setDomInfo();
         });
       }
     },
@@ -1536,7 +1786,10 @@ var createComponent = function createComponent(_ref) {
             /** How many times you have scrolled */
             scrollingTimes: 0,
             // current size strategy
-            currentSizeStrategy: 'percent'
+            currentSizeStrategy: 'percent',
+            currentViewDom: [],
+            virtualWidth: 0,
+            virtualHeight: 0
           }
         },
         bar: {
@@ -1563,7 +1816,8 @@ var createComponent = function createComponent(_ref) {
           bar: {}
         },
         updatedCbs: [],
-        renderError: false
+        renderError: false,
+        hasCalculatedVirtualDomSizeAndPos: false
       };
     },
 
@@ -1720,6 +1974,72 @@ var createComponent = function createComponent(_ref) {
       registryParentResize: function registryParentResize() {
         var resizeEnable = this.mergedOptions.vuescroll.detectResize;
         this.destroyParentDomResize = resizeEnable ? installResizeDetection(this.$el.parentNode, this.useNumbericSize) : function () {};
+      },
+      setDomInfo: function setDomInfo(force) {
+        var _this7 = this;
+
+        if (!this.mergedOptions.vuescroll.enableVirtual) {
+          this.groupManager = null;
+          return;
+        }
+        this.vuescroll.state.currentViewDom = [];
+        this.hasCalculatedVirtualDomSizeAndPos = false;
+
+        setTimeout(function () {
+          if (!_this7.groupManager || force) {
+            var children = _this7.getChildren();
+
+            var _$el$getBoundingClien = _this7.$el.getBoundingClientRect(),
+                l = _$el$getBoundingClien.left,
+                t = _$el$getBoundingClien.top;
+
+            var group = [];
+            var slotIndex = 0;
+            children.forEach(function (child) {
+              if (!child.isResizeElm) {
+                var _child$getBoundingCli = child.getBoundingClientRect(),
+                    left = _child$getBoundingCli.left,
+                    top = _child$getBoundingCli.top;
+
+                group.push({
+                  x: left - l,
+                  y: top - t,
+                  height: child.offsetHeight,
+                  width: child.offsetWidth,
+                  index: slotIndex++
+                });
+              }
+            });
+
+            _this7.groupManager = new GroupManager(group, 100 /* section size */);
+            _this7.vuescroll.state.virtualHeight = _this7.contentElm.scrollHeight;
+            _this7.vuescroll.state.virtualWidth = _this7.contentElm.scrollWidth;
+            _this7.hasCalculatedVirtualDomSizeAndPos = true;
+            _this7.setCurrentViewDom();
+          }
+        }, 0);
+      },
+      setCurrentViewDom: function setCurrentViewDom() {
+        if (!this.groupManager) return;
+
+        var _getPosition = this.getPosition(),
+            scrollLeft = _getPosition.scrollLeft,
+            scrollTop = _getPosition.scrollTop;
+
+        var _$el = this.$el,
+            clientWidth = _$el.clientWidth,
+            clientHeight = _$el.clientHeight;
+
+
+        this.vuescroll.state.currentViewDom = this.groupManager.getCellIndices({
+          x: scrollLeft,
+          y: scrollTop,
+          width: clientWidth,
+          height: clientHeight
+        });
+      },
+      getChildren: function getChildren() {
+        return Array.from(this.contentElm.children);
       }
     }
   };

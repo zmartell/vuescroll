@@ -39,7 +39,7 @@ const createComponent = ({ render, components, mixins }) => ({
     const ops = mergeObject(GCF, _gfc);
 
     this.$options.propsData.ops = this.$options.propsData.ops || {};
-    Object.keys(this.$options.propsData.ops).forEach((key) => {
+    Object.keys(this.$options.propsData.ops).forEach(key => {
       {
         defineReactive(this.mergedOptions, key, this.$options.propsData.ops);
       }
@@ -124,7 +124,7 @@ const createComponent = ({ render, components, mixins }) => ({
     }
   },
   updated() {
-    this.updatedCbs.forEach((cb) => {
+    this.updatedCbs.forEach(cb => {
       cb.call(this);
     });
     // Clear
@@ -163,9 +163,9 @@ const createComponent = ({ render, components, mixins }) => ({
           scrollingTimes: 0,
           // current size strategy
           currentSizeStrategy: 'percent',
-
-          currentChildren: [],
-          lastChildren: []
+          currentViewDom: [],
+          virtualWidth: 0,
+          virtualHeight: 0
         }
       },
       bar: {
@@ -192,7 +192,8 @@ const createComponent = ({ render, components, mixins }) => ({
         bar: {}
       },
       updatedCbs: [],
-      renderError: false
+      renderError: false,
+      hasCalculatedVirtualDomSizeAndPos: false
     };
   },
   /** ------------------------------- Methods -------------------------------- */
@@ -314,7 +315,7 @@ const createComponent = ({ render, components, mixins }) => ({
        * 1. we don't need to registry resize
        * 2. we don't need to registry scroller.
        */
-      smallChangeArray.forEach((opts) => {
+      smallChangeArray.forEach(opts => {
         this.$watch(
           opts,
           () => {
@@ -360,31 +361,53 @@ const createComponent = ({ render, components, mixins }) => ({
         : () => {};
     },
 
-    setDomInfo() {
-      if (!this.mergedOptions.vuescroll.hideItemWhenInvisiable) {
+    setDomInfo(force) {
+      if (!this.mergedOptions.vuescroll.enableVirtual) {
         this.groupManager = null;
         return;
       }
+      this.vuescroll.state.currentViewDom = [];
+      this.hasCalculatedVirtualDomSizeAndPos = false;
 
-      if (!this.groupManager) {
-        const children = this.getChildren();
-        const { left: l, top: t } = this.$el.getBoundingClientRect();
-        const group = [];
-        children.forEach((child, index) => {
-          if (!child.isResizeElm) {
-            const { left, top } = child.getBoundingClientRect();
-            group.push({
-              x: left - l,
-              y: top - t,
-              height: child.offsetHeight,
-              width: child.offsetWidth,
-              index
-            });
-          }
-        });
+      setTimeout(() => {
+        if (!this.groupManager || force) {
+          const children = this.getChildren();
+          const { left: l, top: t } = this.$el.getBoundingClientRect();
+          const group = [];
+          let slotIndex = 0;
+          children.forEach(child => {
+            if (!child.isResizeElm) {
+              const { left, top } = child.getBoundingClientRect();
+              group.push({
+                x: left - l,
+                y: top - t,
+                height: child.offsetHeight,
+                width: child.offsetWidth,
+                index: slotIndex++
+              });
+            }
+          });
 
-        this.groupManager = new GroupManager(group, 100 /* section size */);
-      }
+          this.groupManager = new GroupManager(group, 100 /* section size */);
+          this.vuescroll.state.virtualHeight = this.contentElm.scrollHeight;
+          this.vuescroll.state.virtualWidth = this.contentElm.scrollWidth;
+          this.hasCalculatedVirtualDomSizeAndPos = true;
+          this.setCurrentViewDom();
+        }
+      }, 0);
+    },
+    setCurrentViewDom() {
+      if (!this.groupManager) return;
+
+      const { scrollLeft, scrollTop } = this.getPosition();
+      const { clientWidth, clientHeight } = this.$el;
+
+      this.vuescroll.state.currentViewDom = this.groupManager.getCellIndices({
+        x: scrollLeft,
+        y: scrollTop,
+        width: clientWidth,
+        height: clientHeight
+      });
     },
     getChildren() {
       return Array.from(this.contentElm.children);
