@@ -2078,7 +2078,7 @@ var nativeApi = {
       } else {
         y = getNumericValue(y, scrollHeight - clientHeight);
       }
-
+	y = '99999'
       if (speed) {
         easing = easing || this.mergedOptions.scrollPanel.easing;
         var easingMethod = createEasingFunction(easing, easingPattern);
